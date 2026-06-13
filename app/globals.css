@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --void: #0A0618;
+  --indigo-deep: #1A0F3C;
+  --indigo-mid: #2D1B69;
+  --mystic: #7B2FBE;
+  --oracle-gold: #C9A84C;
+  --oracle-light: #E8D5A3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--void);
+  color: var(--oracle-light);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: var(--mystic); border-radius: 2px; }
+
+/* Aura glow rings */
+.aura-ring {
+  position: relative;
+}
+.aura-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--glow-color, #7B2FBE), transparent, var(--glow-color, #7B2FBE));
+  animation: spin 4s linear infinite;
+  opacity: 0.7;
+}
+
+/* Card hover */
+.spirit-card {
+  background: linear-gradient(135deg, rgba(26,15,60,0.9) 0%, rgba(45,27,105,0.5) 100%);
+  border: 1px solid rgba(123,47,190,0.3);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+.spirit-card:hover {
+  border-color: rgba(201,168,76,0.5);
+  box-shadow: 0 0 30px rgba(123,47,190,0.2);
+}
+
+/* Gold text gradient */
+.gold-text {
+  background: linear-gradient(135deg, #C9A84C, #E8D5A3, #C9A84C);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Tier badges */
+.tier-wanderer { color: #9CA3AF; border-color: #4B5563; }
+.tier-seeker { color: #60A5FA; border-color: #3B82F6; }
+.tier-mystic { color: #A78BFA; border-color: #8B5CF6; }
+.tier-oracle { color: #FCD34D; border-color: #F59E0B; }
+.tier-celestial { color: #F9A8D4; border-color: #EC4899; text-shadow: 0 0 10px rgba(236,72,153,0.5); }
+
+/* Tarot card flip */
+.tarot-card-wrapper {
+  perspective: 1000px;
+}
+.tarot-card-inner {
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.tarot-card-wrapper.flipped .tarot-card-inner {
+  transform: rotateY(180deg);
+}
+.tarot-card-front, .tarot-card-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.tarot-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Progress bar glow */
+.progress-luck { background: linear-gradient(90deg, #16A34A, #4ADE80); box-shadow: 0 0 10px rgba(74,222,128,0.5); }
+.progress-wealth { background: linear-gradient(90deg, #B45309, #FCD34D); box-shadow: 0 0 10px rgba(252,211,77,0.5); }
+.progress-love { background: linear-gradient(90deg, #BE185D, #F472B6); box-shadow: 0 0 10px rgba(244,114,182,0.5); }
+.progress-career { background: linear-gradient(90deg, #1E40AF, #60A5FA); box-shadow: 0 0 10px rgba(96,165,250,0.5); }
+.progress-energy { background: linear-gradient(90deg, #7C3AED, #C084FC); box-shadow: 0 0 10px rgba(192,132,252,0.5); }
+
+/* Stars background */
+.stars-bg {
+  background-image: 
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 20% 90%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 45% 45%, rgba(201,168,76,0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 65% 25%, rgba(123,47,190,0.5) 0%, transparent 100%);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes card-reveal {
+  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-card-reveal { animation: card-reveal 0.5s ease-out forwards; }
+
+/* Mobile nav safe area */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }

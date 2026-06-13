@@ -2,7 +2,7 @@
 
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import type { UserAttributes } from '@/types';
-import { ATTRIBUTE_CONFIG } from '@/lib/game';
+import { ATTR_CONFIG } from '@/lib/game';
 
 interface SpiritRadarChartProps {
   attributes: UserAttributes;

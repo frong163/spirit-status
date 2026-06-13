@@ -167,3 +167,24 @@ CREATE TRIGGER on_auth_user_created
 --   (uuid_generate_v4(), 'celestial_sage',   95, 88, 92, 85, 90, 90.0, 'Celestial', 14),
 --   (uuid_generate_v4(), 'oracle_dawn',      78, 75, 80, 72, 77, 76.4, 'Oracle',    7),
 --   (uuid_generate_v4(), 'mystic_wanderer',  55, 60, 58, 62, 56, 58.2, 'Mystic',    3);
+
+-- ─────────────────────────────────────────────
+-- FRIENDS SYSTEM
+-- ─────────────────────────────────────────────
+CREATE TABLE friendships (
+  id         UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id    UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  friend_id  UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  status     TEXT DEFAULT 'pending' CHECK (status IN ('pending','accepted','blocked')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, friend_id)
+);
+
+CREATE INDEX idx_friendships_user   ON friendships(user_id, status);
+CREATE INDEX idx_friendships_friend ON friendships(friend_id, status);
+
+ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "friends_select" ON friendships FOR SELECT USING (auth.uid() = user_id OR auth.uid() = friend_id);
+CREATE POLICY "friends_insert" ON friendships FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "friends_update" ON friendships FOR UPDATE USING (auth.uid() = friend_id OR auth.uid() = user_id);
+CREATE POLICY "friends_delete" ON friendships FOR DELETE USING (auth.uid() = user_id OR auth.uid() = friend_id);

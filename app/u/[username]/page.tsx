@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { calculateSpiritScore, getAuraTier, getTierColor, getRankSuffix, getTopPercentage, ATTRIBUTE_CONFIG } from '@/lib/game';
+import { calculateSpiritScore, getAuraTier, getTierColor, getRankSuffix, getTopPercentage, ATTR_CONFIG } from '@/lib/game';
 import { getCardById } from '@/lib/tarot';
 import TierBadge from '@/components/ui/TierBadge';
 import AttributeBar from '@/components/ui/AttributeBar';

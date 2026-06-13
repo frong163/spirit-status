@@ -1,62 +1,20 @@
 import type { Config } from "tailwindcss";
-
 const config: Config = {
-  content: [
-    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ["./pages/**/*.{js,ts,jsx,tsx,mdx}","./components/**/*.{js,ts,jsx,tsx,mdx}","./app/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
-        void: "#0A0618",
-        indigo: {
-          deep: "#1A0F3C",
-          mid: "#2D1B69",
-        },
-        mystic: "#7B2FBE",
-        oracle: {
-          gold: "#C9A84C",
-          light: "#E8D5A3",
-        },
-        aura: {
-          wanderer: "#6B7280",
-          seeker: "#3B82F6",
-          mystic: "#8B5CF6",
-          oracle: "#F59E0B",
-          celestial: "#EC4899",
-        },
+        purple: { DEFAULT: '#7C3AED', light: '#EDE9FE', mid: '#A78BFA', dark: '#6D28D9' },
+        gold: { DEFAULT: '#F59E0B', light: '#FEF3C7' },
+        luck: '#22C55E', wealth: '#F59E0B', love: '#EC4899', career: '#3B82F6', energy: '#8B5CF6',
+        surface: '#FFFFFF', bg: '#F8F7FF', text: { DEFAULT: '#1E1B4B', 2: '#6B7280', 3: '#9CA3AF' },
       },
-      fontFamily: {
-        cinzel: ["Cinzel", "serif"],
-        inter: ["Inter", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
-      },
-      animation: {
-        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "spin-slow": "spin 8s linear infinite",
-        "float": "float 6s ease-in-out infinite",
-        "glow": "glow 2s ease-in-out infinite alternate",
-        "shimmer": "shimmer 2s linear infinite",
-      },
-      keyframes: {
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
-        glow: {
-          "0%": { boxShadow: "0 0 20px rgba(123, 47, 190, 0.4)" },
-          "100%": { boxShadow: "0 0 40px rgba(123, 47, 190, 0.8), 0 0 80px rgba(201, 168, 76, 0.3)" },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% center" },
-          "100%": { backgroundPosition: "200% center" },
-        },
-      },
-      backgroundImage: {
-        "mystic-gradient": "linear-gradient(135deg, #0A0618 0%, #1A0F3C 50%, #0A0618 100%)",
-        "gold-shimmer": "linear-gradient(90deg, transparent 0%, #C9A84C 50%, transparent 100%)",
-        "aura-radial": "radial-gradient(ellipse at center, rgba(123,47,190,0.3) 0%, transparent 70%)",
+      fontFamily: { sans: ['Noto Sans Thai', 'Sarabun', 'Inter', 'sans-serif'] },
+      borderRadius: { xl: '16px', '2xl': '20px', '3xl': '24px' },
+      boxShadow: {
+        card: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        'card-hover': '0 4px 20px rgba(124,58,237,0.12)',
+        purple: '0 4px 15px rgba(124,58,237,0.35)',
       },
     },
   },

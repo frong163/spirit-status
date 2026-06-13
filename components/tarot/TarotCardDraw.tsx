@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { TarotCard, UserAttributes } from '@/types';
-import { ATTRIBUTE_CONFIG } from '@/lib/game';
+import { ATTR_CONFIG } from '@/lib/game';
 
 interface TarotCardProps {
   card: TarotCard | null;
@@ -81,7 +81,7 @@ export default function TarotCardDraw({ card, isFlipped, onDraw, isLoading, canD
                   {/* Attribute effects */}
                   <div className="w-full space-y-1.5">
                     {Object.entries(card.attribute_effects).map(([attr, val]) => {
-                      const config = ATTRIBUTE_CONFIG[attr as keyof UserAttributes];
+                      const config = ATTR_CONFIG[attr as keyof UserAttributes];
                       if (!config || !val) return null;
                       return (
                         <div key={attr} className="flex items-center justify-between text-xs">

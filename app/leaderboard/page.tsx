@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import TierBadge from '@/components/ui/TierBadge';
-import { getTierColor, getRankSuffix, LEADERBOARD_CONFIG, ATTRIBUTE_CONFIG } from '@/lib/game';
+import { getTierColor, getRankSuffix, ATTR_CONFIG } from '@/lib/game';
 import type { AuraTier, LeaderboardEntry } from '@/types';
 
 export const revalidate = 60;

@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import type { ShareCardData } from '@/types';
-import { getTierColor, getRankSuffix, ATTRIBUTE_CONFIG } from '@/lib/game';
+import { getTierColor, getRankSuffix, ATTR_CONFIG } from '@/lib/game';
 import TierBadge from '@/components/ui/TierBadge';
 
 interface ShareCardProps {
@@ -94,7 +94,7 @@ export default function ShareCard({ data, onClose }: ShareCardProps) {
           {/* Attribute mini bars */}
           <div className="relative grid grid-cols-5 gap-1">
             {(Object.entries(data.attributes) as [string, number][]).map(([attr, value]) => {
-              const config = ATTRIBUTE_CONFIG[attr as keyof typeof ATTRIBUTE_CONFIG];
+              const config = ATTR_CONFIG[attr as keyof typeof ATTR_CONFIG];
               if (!config) return null;
               return (
                 <div key={attr} className="flex flex-col items-center gap-1">

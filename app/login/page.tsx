@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [mode, setMode] = useState<'login'|'signup'>(searchParams.get('mode') === 'signup' ? 'signup' : 'login');
+  const params = useSearchParams();
+  const [mode, setMode] = useState<'login'|'signup'>(params.get('mode')==='signup'?'signup':'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -16,82 +16,101 @@ function LoginForm() {
   const [success, setSuccess] = useState('');
   const supabase = createClient();
 
-  const handleSubmit = async () => {
+  const submit = async () => {
     setError(''); setLoading(true);
     try {
       if (mode === 'signup') {
-        if (username.length < 3) { setError('ชื่อต้องมีอย่างน้อย 3 ตัวอักษร'); return; }
-        const { data: ex } = await supabase.from('profiles').select('id').eq('username', username.trim()).single();
-        if (ex) { setError('ชื่อนี้ถูกใช้แล้ว กรุณาเลือกชื่อใหม่'); return; }
-        const { error: e } = await supabase.auth.signUp({ email, password, options: { data: { username: username.trim() } } });
+        if (username.trim().length < 3) { setError('ชื่อต้องมีอย่างน้อย 3 ตัวอักษร'); return; }
+        if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) { setError('ชื่อใช้ได้แค่ a-z, 0-9, _'); return; }
+        const { data: ex } = await supabase.from('profiles').select('id').eq('username', username.trim()).maybeSingle();
+        if (ex) { setError('ชื่อนี้มีคนใช้แล้ว'); return; }
+        const { error: e } = await supabase.auth.signUp({
+          email: email.trim(), password,
+          options: { data: { username: username.trim() }, emailRedirectTo: `${window.location.origin}/dashboard` }
+        });
         if (e) throw e;
-        setSuccess('ตรวจสอบอีเมลเพื่อยืนยันบัญชี!');
+        setSuccess('📧 ตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วกลับมา Login ครับ');
       } else {
-        const { error: e } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: e } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (e) throw e;
         router.push('/dashboard');
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+      const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาด';
+      setError(msg.includes('Invalid') ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : msg);
     } finally { setLoading(false); }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-5" style={{ background: 'linear-gradient(160deg, #F8F7FF, #EDE9FE)' }}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link href="/">
-            <div className="text-4xl mb-2">✨</div>
-            <div className="font-bold text-xl" style={{ color: '#1E1B4B' }}>Spirit Status</div>
-            <div className="text-sm" style={{ color: '#7C3AED' }}>พลังงานดี ชีวิตดีขึ้น</div>
-          </Link>
-        </div>
+    <main className="min-h-screen flex flex-col" style={{background:'linear-gradient(180deg,#F5F3FF,#EDE9FE)'}}>
+      <div className="max-w-md mx-auto w-full px-4 py-10 flex-1 flex flex-col justify-center">
 
-        <div className="card p-6">
-          {/* Toggle */}
-          <div className="flex rounded-xl overflow-hidden mb-5 p-1" style={{ background: '#F3F4F6' }}>
-            {(['login','signup'] as const).map(m => (
-              <button key={m} onClick={() => { setMode(m); setError(''); }}
-                className="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all"
-                style={mode === m ? { background: 'white', color: '#7C3AED', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' } : { color: '#6B7280' }}>
-                {m === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}
-              </button>
-            ))}
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-3 mb-10">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl" style={{background:'linear-gradient(135deg,#7C3AED,#6D28D9)',boxShadow:'0 4px 16px rgba(124,58,237,.4)'}}>✨</div>
+          <div>
+            <div className="font-black text-xl" style={{color:'#18181B'}}>Spirit Status</div>
+            <div className="text-sm" style={{color:'#7C3AED'}}>พลังงานดี ชีวิตดีขึ้น</div>
           </div>
+        </Link>
 
-          <div className="space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>ชื่อในระบบ (Spirit Name)</label>
-                <input type="text" value={username} onChange={e => setUsername(e.target.value)}
-                  placeholder="your_spirit_name" className="input-field" />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>อีเมล</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="email@example.com" className="input-field" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>รหัสผ่าน</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••" onKeyDown={e => e.key === 'Enter' && handleSubmit()} className="input-field" />
-            </div>
+        <h2 className="font-black text-2xl mb-1" style={{color:'#18181B'}}>
+          {mode==='signup' ? 'เริ่มต้นฟรี ✨' : 'ยินดีต้อนรับกลับ 👋'}
+        </h2>
+        <p className="text-sm mb-8" style={{color:'#71717A'}}>
+          {mode==='signup' ? 'สร้างบัญชีและจั่วไพ่ครั้งแรกของคุณ' : 'เข้าสู่ระบบเพื่อดูพลังงานวันนี้'}
+        </p>
 
-            {error && <div className="text-sm text-center py-2.5 px-3 rounded-xl" style={{ background: '#FEE2E2', color: '#DC2626' }}>{error}</div>}
-            {success && <div className="text-sm text-center py-2.5 px-3 rounded-xl" style={{ background: '#DCFCE7', color: '#16A34A' }}>{success}</div>}
-
-            <button onClick={handleSubmit} disabled={loading} className="btn-primary mt-2">
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  {mode === 'signup' ? 'กำลังสร้างบัญชี...' : 'กำลังเข้าสู่ระบบ...'}
-                </span>
-              ) : mode === 'signup' ? '✨ เริ่มต้นฟรี' : 'เข้าสู่ระบบ →'}
+        {/* Toggle */}
+        <div className="flex p-1 rounded-2xl mb-6" style={{background:'rgba(124,58,237,.08)'}}>
+          {(['login','signup'] as const).map(m=>(
+            <button key={m} onClick={()=>{setMode(m);setError('');setSuccess('');}}
+              className="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+              style={mode===m ? {background:'white',color:'#7C3AED',boxShadow:'0 2px 8px rgba(0,0,0,.08)'} : {color:'#A1A1AA'}}>
+              {m==='login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก'}
             </button>
-          </div>
+          ))}
         </div>
-        <p className="text-center text-xs mt-4" style={{ color: '#9CA3AF' }}>จั่วไพ่ได้วันละ 1 ครั้ง • ฟรีตลอดไป</p>
+
+        <div className="space-y-4">
+          {mode==='signup' && (
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{color:'#18181B'}}>ชื่อในระบบ</label>
+              <input className="input" value={username} onChange={e=>setUsername(e.target.value)} placeholder="เช่น spirit_user123" autoComplete="username"/>
+              <div className="text-xs mt-1.5" style={{color:'#A1A1AA'}}>ใช้ตัวอักษรภาษาอังกฤษ ตัวเลข หรือ _ เท่านั้น</div>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{color:'#18181B'}}>อีเมล</label>
+            <input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" autoComplete="email"/>
+          </div>
+          <div>
+            <label className="block text-sm font-bold mb-2" style={{color:'#18181B'}}>รหัสผ่าน</label>
+            <input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="อย่างน้อย 6 ตัวอักษร" onKeyDown={e=>e.key==='Enter'&&submit()} autoComplete={mode==='login'?'current-password':'new-password'}/>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 p-4 rounded-2xl text-sm" style={{background:'#FEF2F2',color:'#DC2626'}}>
+              <span>⚠️</span><span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="flex items-start gap-2 p-4 rounded-2xl text-sm" style={{background:'#F0FDF4',color:'#16A34A'}}>
+              <span>{success}</span>
+            </div>
+          )}
+
+          <button onClick={submit} disabled={loading} className="btn btn-primary" style={{marginTop:8}}>
+            {loading
+              ? <><span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white anim-spin-fast"/>กำลังดำเนินการ...</>
+              : mode==='signup' ? '✨ สร้างบัญชีฟรี' : 'เข้าสู่ระบบ →'
+            }
+          </button>
+        </div>
+
+        <p className="text-center text-xs mt-8" style={{color:'#A1A1AA'}}>
+          จั่วไพ่ได้วันละ 1 ครั้ง • ฟรีตลอดไป • ไม่ต้องใช้บัตรเครดิต
+        </p>
       </div>
     </main>
   );
@@ -99,10 +118,8 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{background:'linear-gradient(160deg,#F8F7FF,#EDE9FE)'}}>
-      <div className="text-purple animate-pulse font-semibold">กำลังโหลด...</div>
-    </div>}>
-      <LoginForm />
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{background:'#F5F3FF'}}><div className="anim-pulse text-2xl">✨</div></div>}>
+      <LoginForm/>
     </Suspense>
   );
 }

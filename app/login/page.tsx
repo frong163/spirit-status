@@ -35,17 +35,17 @@ function LoginForm() {
           password,
           options: {
             data: { username: username.trim() },
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `https://spirit-status.vercel.app/dashboard`,
           },
         });
 
-        if (signUpError) {
+        
           // Map English errors to Thai
           if (signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')) {
             setError('อีเมลนี้มีบัญชีแล้ว กรุณาเข้าสู่ระบบแทน');
           } else if (signUpError.message.includes('invalid email')) {
             setError('รูปแบบอีเมลไม่ถูกต้อง');
-          } else if (signUpError.message.includes('Password')) {
+          } else if (signif (signUpError) {UpError.message.includes('Password')) {
             setError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
           } else {
             setError('สมัครไม่สำเร็จ: ' + signUpError.message);

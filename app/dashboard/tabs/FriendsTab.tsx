@@ -1,48 +1,36 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getTierColor, getTierEmoji, ATTR_CONFIG } from '@/lib/game';
+import { Search, UserPlus, UserCheck, X } from 'lucide-react';
 import type { TabProps } from './types';
 import type { AuraTier, UserAttributes } from '@/types';
 
-interface Friend {
-  id: string;
-  username: string;
-  aura_tier: AuraTier;
-  spirit_score: number;
-  attributes: UserAttributes;
-  daily_streak: number;
-  friendship_id: string;
-  status: string;
-  is_requester: boolean;
+interface FriendRow {
+  id: string; username: string; aura_tier: AuraTier;
+  spirit_score: number; attributes: UserAttributes;
+  daily_streak: number; friendship_id: string;
+  status: string; is_requester: boolean;
 }
 
 export default function FriendsTab({ user, showToast }: TabProps) {
   const supabase = createClient();
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [pending, setPending] = useState<Friend[]>([]);
-  const [search, setSearch] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [friends, setFriends]   = useState<FriendRow[]>([]);
+  const [pending, setPending]   = useState<FriendRow[]>([]);
+  const [search, setSearch]     = useState('');
+  const [results, setResults]   = useState<any[]>([]);
+  const [view, setView]         = useState<'friends' | 'search'>('friends');
+  const [loading, setLoading]   = useState(true);
   const [searching, setSearching] = useState(false);
-  const [view, setView] = useState<'friends'|'search'>('friends');
 
-  const loadFriends = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const { data: fships } = await supabase
-      .from('friendships')
-      .select('*')
-      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
-
-    if (!fships) { setLoading(false); return; }
-
-    const ids = fships.map(f => f.user_id === user.id ? f.friend_id : f.user_id);
-    if (ids.length === 0) { setLoading(false); return; }
-
+    const { data: fs } = await supabase.from('friendships').select('*').or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+    if (!fs || fs.length === 0) { setLoading(false); return; }
+    const ids = fs.map(f => f.user_id === user.id ? f.friend_id : f.user_id);
     const { data: profiles } = await supabase.from('profiles').select('*').in('id', ids);
     if (!profiles) { setLoading(false); return; }
-
-    const enriched: Friend[] = fships.map(f => {
+    const rows: FriendRow[] = fs.map(f => {
       const otherId = f.user_id === user.id ? f.friend_id : f.user_id;
       const p = profiles.find(p => p.id === otherId);
       if (!p) return null;
@@ -53,186 +41,194 @@ export default function FriendsTab({ user, showToast }: TabProps) {
         daily_streak: p.daily_streak ?? 0,
         friendship_id: f.id, status: f.status, is_requester: f.user_id === user.id,
       };
-    }).filter(Boolean) as Friend[];
-
-    setFriends(enriched.filter(f => f.status === 'accepted'));
-    setPending(enriched.filter(f => f.status === 'pending'));
+    }).filter(Boolean) as FriendRow[];
+    setFriends(rows.filter(r => r.status === 'accepted'));
+    setPending(rows.filter(r => r.status === 'pending'));
     setLoading(false);
-  };
+  }, [supabase, user.id]);
 
-  useEffect(() => { loadFriends(); }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const handleSearch = async () => {
+  const doSearch = async () => {
     if (!search.trim()) return;
     setSearching(true);
     const { data } = await supabase.from('profiles').select('id,username,aura_tier,spirit_score,daily_streak')
       .ilike('username', `%${search.trim()}%`).neq('id', user.id).limit(10);
-    setSearchResults(data ?? []);
+    setResults(data ?? []);
     setSearching(false);
   };
 
-  const sendRequest = async (friendId: string) => {
+  const sendReq = async (friendId: string) => {
     const { error } = await supabase.from('friendships').insert({ user_id: user.id, friend_id: friendId, status: 'pending' });
-    if (error) { showToast('เกิดข้อผิดพลาด หรืออาจส่งคำขอไปแล้ว'); return; }
+    if (error) { showToast('เกิดข้อผิดพลาด หรือส่งคำขอไปแล้ว'); return; }
     showToast('✅ ส่งคำขอเป็นเพื่อนแล้ว!');
-    setSearchResults(prev => prev.filter(r => r.id !== friendId));
+    setResults(prev => prev.filter(r => r.id !== friendId));
   };
 
-  const acceptRequest = async (friendshipId: string) => {
-    await supabase.from('friendships').update({ status: 'accepted' }).eq('id', friendshipId);
-    showToast('✅ เพิ่มเพื่อนสำเร็จ!');
-    loadFriends();
+  const acceptReq = async (fid: string) => {
+    await supabase.from('friendships').update({ status: 'accepted' }).eq('id', fid);
+    showToast('✅ เพิ่มเพื่อนสำเร็จ!'); load();
   };
 
-  const removeFriend = async (friendshipId: string) => {
-    await supabase.from('friendships').delete().eq('id', friendshipId);
-    showToast('ลบเพื่อนแล้ว');
-    loadFriends();
+  const remove = async (fid: string) => {
+    await supabase.from('friendships').delete().eq('id', fid);
+    showToast('ลบเพื่อนแล้ว'); load();
   };
+
+  const incoming = pending.filter(p => !p.is_requester);
 
   return (
-    <div className="space-y-4 animate-fadeInUp">
+    <div className="pb-nav flex flex-col gap-4 pt-2">
       <div>
-        <h2 className="text-xl font-extrabold" style={{ color: '#1E1B4B' }}>เพื่อน</h2>
-        <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>ดูสถานะพลังงานของเพื่อน</p>
+        <h1 className="text-2xl font-black text-foreground">เพื่อน 👥</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">ดูสถานะพลังงานของเพื่อน</p>
       </div>
 
       {/* Toggle */}
       <div className="flex gap-2">
-        <button onClick={() => setView('friends')}
-          className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-          style={view === 'friends' ? { background: '#7C3AED', color: 'white' } : { background: 'white', color: '#6B7280', border: '1px solid #E5E7EB' }}>
-          เพื่อน ({friends.length})
-        </button>
-        <button onClick={() => setView('search')}
-          className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-          style={view === 'search' ? { background: '#7C3AED', color: 'white' } : { background: 'white', color: '#6B7280', border: '1px solid #E5E7EB' }}>
-          ค้นหาเพื่อน
-        </button>
+        {[{ id: 'friends', label: `เพื่อน (${friends.length})` }, { id: 'search', label: 'ค้นหา' }].map(t => (
+          <button key={t.id} onClick={() => setView(t.id as any)}
+            className="flex-1 rounded-2xl py-2.5 text-sm font-bold transition-all"
+            style={view === t.id
+              ? { background: 'linear-gradient(135deg,#7C3AED,#6D28D9)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(124,58,237,.3)' }
+              : { background: 'white', color: '#71717A', border: '1.5px solid #E4E4E7', cursor: 'pointer' }}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* Pending requests */}
-      {pending.filter(p => !p.is_requester).length > 0 && (
-        <div className="card p-4">
-          <div className="font-semibold text-sm mb-3" style={{ color: '#1E1B4B' }}>
-            คำขอเพื่อน ({pending.filter(p => !p.is_requester).length})
-          </div>
-          <div className="space-y-2">
-            {pending.filter(p => !p.is_requester).map(f => (
-              <div key={f.id} className="flex items-center gap-3 p-2 rounded-xl" style={{ background: '#F8F7FF' }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
-                  style={{ background: getTierColor(f.aura_tier) + '20', color: getTierColor(f.aura_tier) }}>
+      {/* Incoming requests */}
+      {incoming.length > 0 && (
+        <div className="rounded-3xl bg-card p-4 shadow-sm">
+          <p className="mb-3 text-sm font-bold text-foreground">คำขอเพื่อน ({incoming.length})</p>
+          <div className="flex flex-col gap-2">
+            {incoming.map(f => (
+              <div key={f.id} className="flex items-center gap-3 rounded-2xl p-2" style={{ background: '#F5F3FF' }}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full font-black text-sm"
+                  style={{ background: `${getTierColor(f.aura_tier)}18`, border: `2px solid ${getTierColor(f.aura_tier)}`, color: getTierColor(f.aura_tier) }}>
                   {f.username.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm" style={{ color: '#1E1B4B' }}>{f.username}</div>
-                  <div className="text-xs" style={{ color: '#9CA3AF' }}>{getTierEmoji(f.aura_tier)} {f.aura_tier}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">{f.username}</p>
+                  <p className="text-xs text-muted-foreground">{getTierEmoji(f.aura_tier)} {f.aura_tier}</p>
                 </div>
-                <button onClick={() => acceptRequest(f.friendship_id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white"
-                  style={{ background: '#7C3AED' }}>ยืนยัน</button>
+                <button onClick={() => acceptReq(f.friendship_id)}
+                  className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold text-white"
+                  style={{ background: '#7C3AED', border: 'none', cursor: 'pointer' }}>
+                  <UserCheck size={13}/> ยืนยัน
+                </button>
               </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* Friends list */}
       {view === 'friends' && (
-        <>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({length:3}).map((_,i) => <div key={i} className="h-20 rounded-xl animate-pulse" style={{background:'#F3F4F6'}} />)}
-            </div>
-          ) : friends.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-5xl mb-3">👥</div>
-              <p className="font-semibold" style={{ color: '#9CA3AF' }}>ยังไม่มีเพื่อน</p>
-              <p className="text-sm mt-1" style={{ color: '#D1D5DB' }}>ค้นหาเพื่อนเพื่อดูสถานะพลังงาน</p>
-              <button onClick={() => setView('search')} className="mt-4 px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: '#7C3AED' }}>
-                ค้นหาเพื่อน
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {friends.map(f => {
-                const tc = getTierColor(f.aura_tier);
-                return (
-                  <div key={f.id} className="card p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg"
-                        style={{ background: tc + '20', border: `2px solid ${tc}`, color: tc }}>
-                        {f.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold" style={{ color: '#1E1B4B' }}>{f.username}</div>
-                        <div className="text-xs flex items-center gap-1.5 mt-0.5" style={{ color: '#9CA3AF' }}>
-                          <span>{getTierEmoji(f.aura_tier)} {f.aura_tier}</span>
-                          {f.daily_streak >= 3 && <span>🔥{f.daily_streak}</span>}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg" style={{ color: '#7C3AED' }}>{parseFloat(f.spirit_score.toString()).toFixed(1)}</div>
-                        <div className="text-xs" style={{ color: '#9CA3AF' }}>Spirit</div>
-                      </div>
+        loading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-3xl bg-secondary" style={{ animation: 'pulseSoft 1.5s ease-in-out infinite' }} />
+            ))}
+          </div>
+        ) : friends.length === 0 ? (
+          <div className="py-16 text-center">
+            <div className="text-5xl mb-3">👥</div>
+            <p className="font-bold text-muted-foreground">ยังไม่มีเพื่อน</p>
+            <p className="mt-1 text-sm text-muted-foreground" style={{ opacity: .6 }}>ค้นหาเพื่อนเพื่อดูสถานะพลังงาน</p>
+            <button onClick={() => setView('search')}
+              className="mt-4 rounded-2xl px-5 py-2.5 text-sm font-bold text-white"
+              style={{ background: '#7C3AED', border: 'none', cursor: 'pointer' }}>
+              ค้นหาเพื่อน
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {friends.map(f => {
+              const tc = getTierColor(f.aura_tier);
+              return (
+                <div key={f.id} className="rounded-3xl bg-card p-4 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full font-black text-lg flex-shrink-0"
+                      style={{ background: `${tc}18`, border: `2.5px solid ${tc}`, color: tc, boxShadow: `0 0 16px ${tc}30` }}>
+                      {f.username.charAt(0).toUpperCase()}
                     </div>
-                    {/* Mini attribute bars */}
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {(Object.entries(f.attributes) as [keyof UserAttributes, number][]).map(([k, v]) => {
-                        const c = ATTR_CONFIG[k];
-                        return (
-                          <div key={k} className="text-center">
-                            <div className="text-sm">{c.emoji}</div>
-                            <div className="text-xs font-bold mt-0.5" style={{ color: c.color }}>{v}</div>
-                            <div className="progress-bar mt-1" style={{ height: 4 }}>
-                              <div className="progress-fill" style={{ width: `${v}%`, background: c.gradient, height: 4 }} />
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-foreground truncate">{f.username}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {getTierEmoji(f.aura_tier)} {f.aura_tier}
+                        {f.daily_streak >= 3 && <span>· 🔥{f.daily_streak}</span>}
+                      </p>
                     </div>
-                    <button onClick={() => removeFriend(f.friendship_id)}
-                      className="mt-3 text-xs w-full py-1.5 rounded-lg" style={{ background: '#FEE2E2', color: '#EF4444' }}>
-                      ลบเพื่อน
-                    </button>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-primary">{parseFloat(String(f.spirit_score)).toFixed(1)}</p>
+                      <p className="text-xs text-muted-foreground">Spirit</p>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+                  {/* Mini attr bars */}
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {(Object.entries(f.attributes) as [keyof UserAttributes, number][]).map(([k, v]) => {
+                      const c = ATTR_CONFIG[k];
+                      return (
+                        <div key={k} className="text-center">
+                          <span className="text-base">{c.emoji}</span>
+                          <p className="text-xs font-black mt-0.5" style={{ color: c.color }}>{v}</p>
+                          <div className="h-1.5 w-full rounded-full mt-1" style={{ background: '#F4F4F5', overflow: 'hidden' }}>
+                            <div className="h-full rounded-full" style={{ width: `${v}%`, background: c.gradient }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => remove(f.friendship_id)}
+                    className="mt-3 w-full rounded-xl py-1.5 text-xs font-bold flex items-center justify-center gap-1"
+                    style={{ background: '#FEF2F2', color: '#DC2626', border: 'none', cursor: 'pointer' }}>
+                    <X size={12}/> ลบเพื่อน
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )
       )}
 
+      {/* Search */}
       {view === 'search' && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <div className="flex gap-2">
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="ค้นหาชื่อผู้เล่น..." className="input-field flex-1" />
-            <button onClick={handleSearch} disabled={searching}
-              className="px-4 py-3 rounded-xl font-semibold text-white text-sm"
-              style={{ background: '#7C3AED', minWidth: 72 }}>
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && doSearch()}
+                placeholder="ค้นหาชื่อผู้เล่น..."
+                style={{ width: '100%', padding: '12px 16px 12px 38px', borderRadius: 14, border: '2px solid #E4E4E7', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <button onClick={doSearch} disabled={searching}
+              style={{ padding: '12px 18px', borderRadius: 14, background: '#7C3AED', color: 'white', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 70 }}>
               {searching ? '...' : 'ค้นหา'}
             </button>
           </div>
 
-          <div className="space-y-2">
-            {searchResults.map(r => (
-              <div key={r.id} className="card p-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
-                  style={{ background: getTierColor(r.aura_tier) + '20', color: getTierColor(r.aura_tier) }}>
+          <div className="flex flex-col gap-2">
+            {results.map(r => (
+              <div key={r.id} className="flex items-center gap-3 rounded-2xl bg-card p-3.5 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-black text-sm"
+                  style={{ background: `${getTierColor(r.aura_tier)}18`, border: `2px solid ${getTierColor(r.aura_tier)}`, color: getTierColor(r.aura_tier) }}>
                   {r.username.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm" style={{ color: '#1E1B4B' }}>{r.username}</div>
-                  <div className="text-xs" style={{ color: '#9CA3AF' }}>{getTierEmoji(r.aura_tier)} {r.aura_tier} • {parseFloat(r.spirit_score).toFixed(1)} pts</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">{r.username}</p>
+                  <p className="text-xs text-muted-foreground">{getTierEmoji(r.aura_tier)} {r.aura_tier} · {parseFloat(r.spirit_score).toFixed(1)} pts</p>
                 </div>
-                <button onClick={() => sendRequest(r.id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white"
-                  style={{ background: '#7C3AED' }}>+ เพิ่ม</button>
+                <button onClick={() => sendReq(r.id)}
+                  className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold text-white"
+                  style={{ background: '#7C3AED', border: 'none', cursor: 'pointer' }}>
+                  <UserPlus size={13}/> เพิ่ม
+                </button>
               </div>
             ))}
-            {searchResults.length === 0 && search && !searching && (
-              <div className="text-center py-8" style={{ color: '#9CA3AF' }}>ไม่พบผู้เล่นชื่อนี้</div>
+            {results.length === 0 && search && !searching && (
+              <p className="py-8 text-center text-sm text-muted-foreground">ไม่พบผู้เล่นชื่อนี้</p>
             )}
           </div>
         </div>
